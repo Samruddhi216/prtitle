@@ -2,25 +2,34 @@ name: RAPP PR Workflow
 
 on:
   pull_request:
-    types: [opened, edited]  # Trigger on PR open or edit
+    types: [opened, edited, synchronize]  # Trigger on PR open, edit, or synchronize
 
 jobs:
   create-jira-link:
-    if: startsWith(github.event.pull_request.title, 'RAPP-')  # Check if PR title starts with 'RAPP-'
     runs-on: ubuntu-latest
 
     steps:
-    - name: Extract PR title and generate Jira link
-      run: |
-        PR_TITLE=${{ github.event.pull_request.title }}
-        TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')  # Extract ticket number like 'RAPP-123'
-        JIRA_URL="https://jira.target.com/$TICKET"
-        echo "Generated Jira Link: $JIRA_URL"
-      
-    - name: Comment Jira link on PR
-      run: |
-        curl -X POST \
-        -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-        -H "Content-Type: application/json" \
-        -d "{\"body\": \"Jira link: https://jira.target.com/$TICKET\"}" \
-        ${{ github.event.pull_request.issue_url }}/comments
+      # Step 1: Log the PR title for debugging
+      - name: Log PR title for debugging
+        run: echo "PR Title:${{ github.event.pull_request.title }}"
+
+      # Step 2: Check if PR title starts with 'RAPP-' after trimming spaces
+      - name: Check PR title and generate Jira link
+        if: startsWith(github.event.pull_request.title, 'RAPP-')
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')  # Extract ticket number like 'RAPP-123'
+          JIRA_URL="https://jira.target.com/$TICKET"
+          echo "Generated Jira Link: $JIRA_URL"
+
+      # Step 3: Comment Jira link on the PR
+      - name: Comment Jira link on PR
+        if: startsWith(github.event.pull_request.title, 'RAPP-')  # Same condition to ensure it's only for 'RAPP-' PRs
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')
+          curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"body\": \"Jira link: https://jira.target.com/$TICKET\"}" \
+          ${{ github.event.pull_request.issue_url }}/comments
