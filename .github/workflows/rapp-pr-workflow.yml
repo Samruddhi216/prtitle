@@ -1,0 +1,26 @@
+name: RAPP PR Workflow
+
+on:
+  pull_request:
+    types: [opened, edited]  # Trigger on PR open or edit
+
+jobs:
+  create-jira-link:
+    if: startsWith(github.event.pull_request.title, 'RAPP-')  # Check if PR title starts with 'RAPP-'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Extract PR title and generate Jira link
+      run: |
+        PR_TITLE=${{ github.event.pull_request.title }}
+        TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')  # Extract ticket number like 'RAPP-123'
+        JIRA_URL="https://jira.target.com/$TICKET"
+        echo "Generated Jira Link: $JIRA_URL"
+      
+    - name: Comment Jira link on PR
+      run: |
+        curl -X POST \
+        -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+        -H "Content-Type: application/json" \
+        -d "{\"body\": \"Jira link: https://jira.target.com/$TICKET\"}" \
+        ${{ github.event.pull_request.issue_url }}/comments
