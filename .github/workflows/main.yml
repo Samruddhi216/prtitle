@@ -1,0 +1,40 @@
+name: PR to Jira Link Workflow
+
+on:
+  pull_request:
+    types: [opened, edited]  # Trigger when a PR is opened or edited
+
+jobs:
+  create-jira-link:
+    runs-on: ubuntu-latest  # Use Ubuntu for the runner environment
+
+    steps:
+      # Step 1: Log the PR title for debugging purposes
+      - name: Log PR title for debugging
+        run: echo "PR Title:${{ github.event.pull_request.title }}"
+
+      # Step 2: Extract the prefix (like ABC-123) from the PR title and generate the Jira link
+      - name: Extract prefix and generate Jira link
+        id: create-jira-link  # ID used to refer to output in later steps
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          # Extract the prefix from the PR title
+          PREFIX=$(echo "$PR_TITLE" | grep -o '^[A-Z]\+-[0-9]\+')
+          if [ -z "$PREFIX" ]; then
+            echo "No valid Jira ticket prefix found in PR title."
+            exit 1
+          fi
+          # Construct the Jira URL using the extracted prefix
+          JIRA_URL="https://jira.target.com/browse/$PREFIX"
+          echo "Generated Jira Link: $JIRA_URL"
+          echo "::set-output name=jira_url::$JIRA_URL"
+
+      # Step 3: Post the generated Jira link as a comment on the PR
+      - name: Comment Jira link on PR
+        run: |
+          JIRA_URL="${{ steps.create-jira-link.outputs.jira_url }}"
+          curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"body\": \"Jira link: $JIRA_URL\"}" \
+          ${{ github.event.pull_request.issue_url }}/comments
