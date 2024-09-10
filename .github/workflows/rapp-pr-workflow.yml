@@ -13,18 +13,18 @@ jobs:
       - name: Log PR title for debugging
         run: echo "PR Title:${{ github.event.pull_request.title }}"
 
-      # Step 2: Check if PR title starts with 'RAPP-' after trimming spaces
+      # Step 2: Check PR title and generate Jira link
       - name: Check PR title and generate Jira link
-        if: startsWith(github.event.pull_request.title, 'RAPP-')
+        if: startsWith(trim(github.event.pull_request.title), 'RAPP-')  # Trim spaces and check for 'RAPP-'
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
           TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')  # Extract ticket number like 'RAPP-123'
           JIRA_URL="https://jira.target.com/$TICKET"
           echo "Generated Jira Link: $JIRA_URL"
 
-      # Step 3: Comment Jira link on the PR
+      # Step 3: Comment Jira link on PR
       - name: Comment Jira link on PR
-        if: startsWith(github.event.pull_request.title, 'RAPP-')  # Same condition to ensure it's only for 'RAPP-' PRs
+        if: startsWith(trim(github.event.pull_request.title), 'RAPP-')  # Same condition as above
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
           TICKET=$(echo "$PR_TITLE" | grep -o 'RAPP-[0-9]\+')
